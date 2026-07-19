@@ -1,0 +1,28 @@
+{
+  "companies": [
+    {
+      "name": "Stripe",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "stripe",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Notion",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "notion",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Robinhood",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "robinhood",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    }
+  ]
+}
