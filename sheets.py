@@ -1,4 +1,5 @@
 import json
+from datetime import datetime
 
 from google.oauth2.service_account import Credentials
 from googleapiclient.discovery import build
@@ -9,6 +10,11 @@ from connectors.base import Job
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 SHEET_RANGE = "Sheet1"
 COLUMNS = ["Job ID", "Title", "Company", "URL", "Date Found", "Status", "Notes"]
+
+
+def _format_date(iso_str: str) -> str:
+    dt = datetime.fromisoformat(iso_str.replace("Z", "+00:00"))
+    return dt.strftime("%Y-%m-%d - %I:%M %p")
 
 _service = None
 
@@ -24,7 +30,7 @@ def _sheets():
 
 
 def append_job(job: Job, first_seen: str) -> int:
-    row = [job.job_id, job.title, job.company, job.url, first_seen, "new", ""]
+    row = [job.job_id, job.title, job.company, job.url, _format_date(first_seen), "new", ""]
     result = (
         _sheets()
         .values()

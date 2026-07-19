@@ -23,6 +23,238 @@
       "slug": "robinhood",
       "connector": "greenhouse",
       "discord_channel_id": null
+    },
+    {
+      "name": "Coinbase",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "coinbase",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Airbnb",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "airbnb",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Instacart",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "instacart",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Reddit",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "reddit",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Pinterest",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "pinterest",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Discord",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "discord",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Duolingo",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "duolingo",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Affirm",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "affirm",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Brex",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "brex",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Chime",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "chime",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Lyft",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "lyft",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Figma",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "figma",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Webflow",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "webflow",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Asana",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "asana",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Vercel",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "vercel",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Gusto",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "gusto",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Doximity",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "doximity",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Databricks",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "databricks",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "GitLab",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "gitlab",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Dropbox",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "dropbox",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Squarespace",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "squarespace",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Peloton",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "peloton",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Roblox",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "roblox",
+      "connector": "greenhouse",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Linear",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "linear",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Ramp",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "ramp",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Vanta",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "vanta",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "OpenAI",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "openai",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Watershed",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "watershed",
+      "connector": "ashby",
+      "discord_channel_id": null
+    },
+    {
+      "name": "Amplitude",
+      "enabled": true,
+      "ats": "ashby",
+      "slug": "amplitude",
+      "connector": "ashby",
+      "discord_channel_id": null
     }
   ]
 }
