@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 import config
 from connectors import CONNECTORS
 from filters import is_relevant, is_us_location, is_within_experience_range
-from notifier import get_reaction_status, post_error, post_job
+from notifier import delete_message, get_reaction_status, post_error, post_job
 from sheets import append_job, update_status
 from state import load_state, save_state
 
@@ -43,9 +43,10 @@ def run() -> None:
     try:
         posted = 0
         for job in new_jobs:
+            company_cfg = next((c for c in companies if c["name"] == job.company), {})
+            channel_id = company_cfg.get("discord_channel_id")
+            msg_id = None
             try:
-                company_cfg = next((c for c in companies if c["name"] == job.company), {})
-                channel_id = company_cfg.get("discord_channel_id")
                 msg_id = post_job(job, channel_id)
                 first_seen = now_iso()
                 row = append_job(job, first_seen)
@@ -61,6 +62,11 @@ def run() -> None:
                 }
                 posted += 1
             except Exception as e:
+                # posting to Discord can succeed before a later step (Sheets)
+                # fails -- roll back the message so the job isn't left
+                # orphaned (no state entry) and reposted as a duplicate next run.
+                if msg_id is not None and job.job_id not in state:
+                    delete_message(msg_id, channel_id)
                 log_error(f"failed to post/log job {job.job_id}: {e}")
 
         for job_id, record in state.items():
