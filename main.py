@@ -3,8 +3,8 @@ from datetime import UTC, datetime
 
 import config
 from connectors import CONNECTORS
-from filters import is_us_location, is_within_experience_range, job_category
-from notifier import delete_message, get_reaction_status, post_error, post_job
+from filters import is_recent, is_us_location, is_within_experience_range, job_category, time_ago
+from notifier import delete_message, get_job_status, post_error, post_job
 from sheets import append_job, update_status
 from state import load_state, save_state
 
@@ -48,7 +48,7 @@ def run() -> None:
     categorized = ((j, job_category(j)) for j in all_jobs)
     relevant = [
         (j, cat) for j, cat in categorized
-        if cat is not None and is_us_location(j) and is_within_experience_range(j)
+        if cat is not None and is_us_location(j) and is_within_experience_range(j) and is_recent(j)
     ]
     new_jobs = [(j, cat) for j, cat in relevant if j.job_id not in state]
 
@@ -74,7 +74,7 @@ def run() -> None:
             channel_id = company_cfg.get("discord_channel_id") or CATEGORY_CHANNELS.get(category)
             msg_id = None
             try:
-                msg_id = post_job(job, channel_id)
+                msg_id = post_job(job, channel_id, time_ago(job.posted_date))
                 first_seen = now_iso()
                 row = append_job(job, first_seen)
                 state[job.job_id] = {
@@ -99,14 +99,14 @@ def run() -> None:
         for job_id, record in state.items():
             if record["status"] in ("new", "opened"):
                 try:
-                    new_status = get_reaction_status(
+                    new_status = get_job_status(
                         record["discord_message_id"], record.get("discord_channel_id")
                     )
                     if new_status and new_status != record["status"]:
                         record["status"] = new_status
                         update_status(record["sheet_row"], new_status)
                 except Exception as e:
-                    log_error(f"failed to sync reaction status for {job_id}: {e}")
+                    log_error(f"failed to sync status for {job_id}: {e}")
     finally:
         # always persist whatever progress was made, even if the loop above
         # raised — otherwise a crash mid-run leaves posted jobs untracked in

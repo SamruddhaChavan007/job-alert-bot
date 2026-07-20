@@ -4,12 +4,26 @@
 # (48 hits seen for base_query=android as of 2026-07 -- well under 100).
 # Verified live (2026-07): fields id_icims, job_path, title, normalized_location,
 # posted_date all present and stable.
+from datetime import datetime, timezone
+
 import requests
 
 from .base import HEADERS, Job
 
 SEARCH_URL = "https://www.amazon.jobs/en/search.json"
 BASE_URL = "https://www.amazon.jobs"
+
+
+def _normalize_posted_date(raw: str | None) -> str | None:
+    # Amazon returns a human string like "October 27, 2025", not ISO --
+    # normalize to ISO here so filters.py can parse it uniformly regardless
+    # of which connector a job came from.
+    if not raw:
+        return None
+    try:
+        return datetime.strptime(raw, "%B %d, %Y").replace(tzinfo=timezone.utc).isoformat()
+    except ValueError:
+        return None
 
 
 def normalize(raw: dict) -> Job:
@@ -19,7 +33,7 @@ def normalize(raw: dict) -> Job:
         company="Amazon",
         url=f"{BASE_URL}{raw['job_path']}",
         location=raw.get("normalized_location"),
-        posted_date=raw.get("posted_date"),
+        posted_date=_normalize_posted_date(raw.get("posted_date")),
     )
 
 

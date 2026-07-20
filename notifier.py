@@ -7,11 +7,20 @@ from connectors.base import Job
 
 API_BASE = "https://discord.com/api/v10"
 MAX_RETRIES = 5
+POLL_DURATION_HOURS = 72  # 3 days
 
+# legacy: messages posted before poll-based status tracking used plain
+# reactions -- kept so those older messages keep syncing correctly.
 REACTION_STATUS_MAP = {
     "👀": "opened",
     "✅": "applied",
     "❌": "skipped",
+}
+
+POLL_ANSWER_STATUS_MAP = {
+    "Viewed": "opened",
+    "Applied": "applied",
+    "Skipped": "skipped",
 }
 
 
@@ -34,16 +43,27 @@ def _request_with_retry(method: str, url: str, **kwargs) -> requests.Response:
     return r
 
 
-def post_job(job: Job, channel_id: str | None = None) -> str:
+def post_job(job: Job, channel_id: str | None = None, posted_ago: str | None = None) -> str:
     cid = _channel_id(job, channel_id)
+    lines = [f"**{job.title}** — {job.company}", job.location or "Location not listed"]
+    if posted_ago:
+        lines.append(f"Posted {posted_ago}")
+    lines.append(job.url)
     r = _request_with_retry(
         "POST",
         f"{API_BASE}/channels/{cid}/messages",
         json={
-            "content": (
-                f"**{job.title}** — {job.company}\n"
-                f"{job.location or 'Location not listed'}\n{job.url}"
-            )
+            "content": "\n".join(lines),
+            "poll": {
+                "question": {"text": "Status?"},
+                "answers": [
+                    {"poll_media": {"text": "Applied"}},
+                    {"poll_media": {"text": "Skipped"}},
+                    {"poll_media": {"text": "Viewed"}},
+                ],
+                "duration": POLL_DURATION_HOURS,
+                "allow_multiselect": False,
+            },
         },
     )
     r.raise_for_status()
@@ -75,16 +95,35 @@ def post_error(message: str) -> None:
         print(f"[error] failed to post to bot-errors channel: {e}")
 
 
-def get_reaction_status(message_id: str, channel_id: str | None = None) -> str | None:
-    # fetch the message once and read its reaction summary, instead of one
-    # request per emoji -- cuts reaction-sync from 3 requests/job to 1.
-    cid = channel_id or config.DISCORD_CHANNEL_ID
-    r = _request_with_retry("GET", f"{API_BASE}/channels/{cid}/messages/{message_id}")
-    if r.status_code != 200:
-        return None
-    reactions = r.json().get("reactions") or []
+def _poll_status(poll: dict) -> str | None:
+    answers = {a["answer_id"]: a["poll_media"]["text"] for a in poll.get("answers", [])}
+    counts = (poll.get("results") or {}).get("answer_counts", [])
+    for ac in counts:
+        if ac.get("count", 0) > 0:
+            status = POLL_ANSWER_STATUS_MAP.get(answers.get(ac["id"]))
+            if status:
+                return status
+    return None
+
+
+def _reaction_status(reactions: list) -> str | None:
     present = {rx["emoji"]["name"] for rx in reactions if rx.get("count", 0) > 0}
     for emoji, status in REACTION_STATUS_MAP.items():
         if emoji in present:
             return status
     return None
+
+
+def get_job_status(message_id: str, channel_id: str | None = None) -> str | None:
+    # fetch the message once and read its status from whichever mechanism it
+    # uses -- new messages carry a poll, messages posted before poll-based
+    # tracking rolled out only have reactions. One request either way.
+    cid = channel_id or config.DISCORD_CHANNEL_ID
+    r = _request_with_retry("GET", f"{API_BASE}/channels/{cid}/messages/{message_id}")
+    if r.status_code != 200:
+        return None
+    data = r.json()
+    poll = data.get("poll")
+    if poll:
+        return _poll_status(poll)
+    return _reaction_status(data.get("reactions") or [])
