@@ -26,8 +26,8 @@ Create a **public** repo (e.g. `job-alert-bot`) and push this code to it. Public
 2. Under **Privileged Gateway Intents**, none are required for this bot (it only posts messages and reads poll results/reactions via REST — no gateway connection).
 3. Copy the bot token → `DISCORD_BOT_TOKEN`.
 4. OAuth2 → URL Generator → scope `bot`, permissions: `Send Messages`, `Read Message History`, `Add Reactions`. Open the generated URL to invite the bot to your server. (Note: bots can create polls and read poll results, but cannot vote on polls via the API — voting is a human-only client action, which is exactly what this is for.)
-5. Create three text channels: `#job-alerts` (Android/Kotlin postings), `#dev-jobs` (generic software engineer/developer postings), and `#bot-errors`.
-6. Enable Developer Mode in Discord (User Settings → Advanced), right-click each channel → Copy Channel ID → `DISCORD_CHANNEL_ID`, `DEV_JOBS_CHANNEL_ID`, and `BOT_ERRORS_CHANNEL_ID`.
+5. Create five text channels: `#job-alerts` (Android/Kotlin postings), `#dev-jobs` (generic software engineer/developer postings), `#bot-errors`, `#archived-jobs` (jobs whose poll expired unvoted get moved here), and `#eod-updates` (daily summary).
+6. Enable Developer Mode in Discord (User Settings → Advanced), right-click each channel → Copy Channel ID → `DISCORD_CHANNEL_ID`, `DEV_JOBS_CHANNEL_ID`, `BOT_ERRORS_CHANNEL_ID`, `ARCHIVED_JOBS_CHANNEL_ID`, and `EOD_UPDATES_CHANNEL_ID`.
 
 ### 4. Google Sheets
 1. Google Cloud Console → new project → enable **Google Sheets API**.
@@ -37,22 +37,24 @@ Create a **public** repo (e.g. `job-alert-bot`) and push this code to it. Public
 5. Copy the sheet ID from its URL → `GOOGLE_SHEET_ID`.
 
 ### 5. GitHub Actions secrets
-Repo → Settings → Secrets and variables → Actions → add each of: `GIST_TOKEN`, `GIST_ID`, `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_ID`, `DEV_JOBS_CHANNEL_ID`, `BOT_ERRORS_CHANNEL_ID`, `GOOGLE_SHEETS_CREDENTIALS`, `GOOGLE_SHEET_ID`.
+Repo → Settings → Secrets and variables → Actions → add each of: `GIST_TOKEN`, `GIST_ID`, `DISCORD_BOT_TOKEN`, `DISCORD_CHANNEL_ID`, `DEV_JOBS_CHANNEL_ID`, `ARCHIVED_JOBS_CHANNEL_ID`, `EOD_UPDATES_CHANNEL_ID`, `BOT_ERRORS_CHANNEL_ID`, `GOOGLE_SHEETS_CREDENTIALS`, `GOOGLE_SHEET_ID`.
 
 Once secrets are set, trigger the workflow manually from the Actions tab (`workflow_dispatch`) to verify it runs end-to-end.
 
-### 6. External cron trigger (cron-job.org)
-The workflow only listens for `workflow_dispatch` — there's no `schedule:` trigger in [job-watch.yml](.github/workflows/job-watch.yml). GitHub's own scheduled-cron event is deprioritized/delayed under load (observed delays of 30-60+ minutes in practice), so an external service pings the dispatch API on a fixed interval instead:
+### 6. External cron triggers (cron-job.org)
+Neither workflow listens for a `schedule:` trigger — GitHub's own scheduled-cron event is deprioritized/delayed under load (observed delays of 30-60+ minutes in practice), so an external service pings each workflow's dispatch API on its own schedule instead. This means **two** separate cron-job.org entries, one per workflow:
 
 1. Create a **fine-grained PAT** (Settings → Developer settings → Personal access tokens → Fine-grained tokens) scoped to only this repo, with **Actions: Read and write** permission.
-2. Sign up free at https://cron-job.org/, create a cronjob:
-   - **URL**: `https://api.github.com/repos/<user>/<repo>/actions/workflows/job-watch.yml/dispatches`
-   - **Request method**: `POST`
-   - **Headers**: `Authorization: Bearer <PAT>`, `Accept: application/vnd.github+json`, `Content-Type: application/json`
-   - **Request body**: `{"ref":"main"}`
-   - **Schedule**: whatever interval you want (e.g. every 5-15 minutes)
+2. Sign up free at https://cron-job.org/, create two cronjobs (same PAT works for both):
+   - **[job-watch.yml](.github/workflows/job-watch.yml)** — the every-15-minutes poller
+     - **URL**: `https://api.github.com/repos/<user>/<repo>/actions/workflows/job-watch.yml/dispatches`
+     - **Schedule**: every 5-15 minutes
+   - **[eod-summary.yml](.github/workflows/eod-summary.yml)** — the once-daily summary
+     - **URL**: `https://api.github.com/repos/<user>/<repo>/actions/workflows/eod-summary.yml/dispatches`
+     - **Schedule**: once daily, timed for 9 PM in your local timezone (cron-job.org lets you set the job's own timezone in its schedule settings)
+   - Both: **Request method** `POST`, **Headers** `Authorization: Bearer <PAT>`, `Accept: application/vnd.github+json`, `Content-Type: application/json`, **Request body** `{"ref":"main"}`
 
-Do **not** re-add a `schedule:` trigger to the workflow alongside this — two trigger sources firing concurrently can race on the same Gist state (one run's newly-discovered job can get silently dropped if a second run reads/writes state at the same time).
+Do **not** re-add a `schedule:` trigger to job-watch.yml alongside this — two trigger sources firing concurrently can race on the same Gist state (one run's newly-discovered job can get silently dropped if a second run reads/writes state at the same time).
 
 ## Filtering & channel routing
 Four filters combine in `main.py` — a job must pass all four to get posted (see [filters.py](filters.py)):
@@ -67,6 +69,11 @@ Per-company `discord_channel_id` (in `companies.json`) overrides category-based 
 Each posted job includes a native Discord poll — `Applied` / `Skipped` / `Viewed`, single-select, open for `POLL_DURATION_HOURS` (4 hours, in `notifier.py`). Voting is a human-only client action; bots can create polls and read results but cannot vote via the API. Status sync (`notifier.get_job_status`) auto-detects per message: reads poll results if the message has one, otherwise falls back to a legacy emoji-reaction check (👀/✅/❌) for messages posted before polls were introduced — both formats keep working indefinitely, no migration needed.
 
 A job stuck on `new`/`opened` past its poll's expiry (`first_seen` + `POLL_DURATION_HOURS`) is auto-marked `archived` instead of being checked forever — voting is permanently impossible after expiry, so there's no reason to keep spending an API call on it every run. This also bounds total sync workload as state grows: without it, every tracked job gets re-checked on every single run indefinitely, and runtime grows unbounded with total job count (this was a real, measured problem — full runs took multiple minutes once state passed a couple hundred entries; dropped to under 40s once expired jobs stopped being checked).
+
+Archiving actually **moves** the message — the original is deleted from `#job-alerts`/`#dev-jobs` and a plain (non-poll) notice is reposted in `#archived-jobs`, so the live channels only ever show still-votable postings. `state`'s `discord_message_id`/`discord_channel_id` are updated to point at the new location.
+
+## End of Day summary
+[eod_summary.py](eod_summary.py) (triggered by its own daily cron-job.org entry, see setup step 6) posts a per-category/per-day breakdown to `#eod-updates`: how many jobs were posted today and how many were marked `applied` today, split by `android`/`swe` plus a total. Requires two fields on each state entry — `category` (set at posting time) and `status_updated_at` (updated whenever status changes, including on archive) — entries that predate this tracking are excluded from the totals rather than silently inflating them under an unlabeled bucket.
 
 ## Per-run posting cap
 `MAX_NEW_JOBS_PER_CATEGORY_PER_RUN` (20, in `main.py`) is a circuit breaker: if a single run finds more new jobs than this in one category — e.g. a newly-added company's entire backlog matching on its first run — only the first N post, and the rest stay untracked so they drip in over subsequent runs instead of flooding a channel. Combined with the freshness filter, backlog jobs are unlikely to ever reach this cap in the first place. When the cap does trigger, `sort_by_recency()` ensures the newest postings win the slots (not arbitrary fetch order) — the whole point of this bot is applying before other candidates, so a 10-minutes-old posting should never lose a slot to a 2-day-old one.
