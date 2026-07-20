@@ -1,6 +1,13 @@
 {
   "companies": [
     {
+      "name": "Google",
+      "enabled": true,
+      "connector": "google",
+      "query": "android",
+      "discord_channel_id": null
+    },
+    {
       "name": "Stripe",
       "enabled": true,
       "ats": "greenhouse",
