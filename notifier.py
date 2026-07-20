@@ -1,9 +1,12 @@
+import time
+
 import requests
 
 import config
 from connectors.base import Job
 
 API_BASE = "https://discord.com/api/v10"
+MAX_RETRIES = 5
 
 REACTION_STATUS_MAP = {
     "👀": "opened",
@@ -20,18 +23,27 @@ def _channel_id(job: Job, override: str | None) -> str:
     return override or config.DISCORD_CHANNEL_ID
 
 
+def _post_with_retry(url: str, json_body: dict) -> requests.Response:
+    for attempt in range(MAX_RETRIES):
+        r = requests.post(url, headers=_headers(), json=json_body, timeout=15)
+        if r.status_code != 429:
+            return r
+        retry_after = r.json().get("retry_after", 1) if r.content else 1
+        time.sleep(retry_after + 0.25)
+    r.raise_for_status()
+    return r
+
+
 def post_job(job: Job, channel_id: str | None = None) -> str:
     cid = _channel_id(job, channel_id)
-    r = requests.post(
+    r = _post_with_retry(
         f"{API_BASE}/channels/{cid}/messages",
-        headers=_headers(),
-        json={
+        {
             "content": (
                 f"**{job.title}** — {job.company}\n"
                 f"{job.location or 'Location not listed'}\n{job.url}"
             )
         },
-        timeout=15,
     )
     r.raise_for_status()
     return r.json()["id"]
@@ -40,11 +52,9 @@ def post_job(job: Job, channel_id: str | None = None) -> str:
 def post_error(message: str) -> None:
     if not config.BOT_ERRORS_CHANNEL_ID:
         return
-    requests.post(
+    _post_with_retry(
         f"{API_BASE}/channels/{config.BOT_ERRORS_CHANNEL_ID}/messages",
-        headers=_headers(),
-        json={"content": message},
-        timeout=15,
+        {"content": message},
     )
 
 
