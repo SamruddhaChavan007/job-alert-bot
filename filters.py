@@ -14,6 +14,21 @@ SWE_KEYWORDS = [
 
 US_PHRASES = ["united states", "usa", "u.s."]
 US_STATE_CODES = ["ca", "ny", "tx", "wa", "il", "ma", "az"]
+# Workday returns full state names in "State - City" order (e.g. "California -
+# San Francisco"), not the "City, ST" comma format Greenhouse/Ashby/Amazon use
+# -- a real miss found testing the Workday connector against live Salesforce
+# data. Known caveat: "Georgia" collides with the country of the same name;
+# accepted as low-risk for US-focused tech job boards.
+US_STATE_NAMES = [
+    "alabama", "alaska", "arizona", "arkansas", "california", "colorado", "connecticut",
+    "delaware", "florida", "georgia", "hawaii", "idaho", "illinois", "indiana", "iowa",
+    "kansas", "kentucky", "louisiana", "maine", "maryland", "massachusetts", "michigan",
+    "minnesota", "mississippi", "missouri", "montana", "nebraska", "nevada",
+    "new hampshire", "new jersey", "new mexico", "new york", "north carolina",
+    "north dakota", "ohio", "oklahoma", "oregon", "pennsylvania", "rhode island",
+    "south carolina", "south dakota", "tennessee", "texas", "utah", "vermont",
+    "virginia", "washington", "west virginia", "wisconsin", "wyoming",
+]
 CANADA_PHRASES = ["canada"]
 CANADIAN_PROVINCE_CODES = ["on", "bc", "qc", "ab", "mb", "sk", "ns", "nb", "pe", "nl", "yt", "nt", "nu"]
 
@@ -21,6 +36,9 @@ CANADIAN_PROVINCE_CODES = ["on", "bc", "qc", "ab", "mb", "sk", "ns", "nb", "pe",
 # match inside "Toronto, Canada" — a real false positive seen against live Greenhouse data.
 _STATE_CODE_RE = re.compile(
     r"\b(" + "|".join(US_STATE_CODES) + r")\b"
+)
+_STATE_NAME_RE = re.compile(
+    r"\b(" + "|".join(US_STATE_NAMES) + r")\b"
 )
 
 # Greenhouse formats Canadian listings as "City, Province, CA" where CA is
@@ -118,4 +136,4 @@ def is_us_location(job: Job) -> bool:
         return False
     if any(phrase in loc for phrase in US_PHRASES):
         return True
-    return bool(_STATE_CODE_RE.search(loc))
+    return bool(_STATE_CODE_RE.search(loc)) or bool(_STATE_NAME_RE.search(loc))

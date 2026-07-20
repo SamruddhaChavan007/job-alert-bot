@@ -15,6 +15,16 @@
       "discord_channel_id": null
     },
     {
+      "name": "Salesforce",
+      "enabled": true,
+      "connector": "workday",
+      "tenant": "salesforce",
+      "dc": "wd12",
+      "site": "External_Career_Site",
+      "query": "android",
+      "discord_channel_id": null
+    },
+    {
       "name": "Stripe",
       "enabled": true,
       "ats": "greenhouse",
