@@ -1,4 +1,4 @@
-from . import amazon, ashby, google, greenhouse, workday
+from . import amazon, ashby, google, greenhouse, lever, workday
 
 CONNECTORS = {
     "greenhouse": greenhouse.fetch,
@@ -6,4 +6,5 @@ CONNECTORS = {
     "google": google.fetch,
     "amazon": amazon.fetch,
     "workday": workday.fetch,
+    "lever": lever.fetch,
 }

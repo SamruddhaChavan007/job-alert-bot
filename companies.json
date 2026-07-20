@@ -279,6 +279,22 @@
       "slug": "amplitude",
       "connector": "ashby",
       "discord_channel_id": null
+    },
+    {
+      "name": "Spotify",
+      "enabled": true,
+      "ats": "lever",
+      "slug": "spotify",
+      "connector": "lever",
+      "discord_channel_id": null
+    },
+    {
+      "name": "SoundCloud",
+      "enabled": true,
+      "ats": "greenhouse",
+      "slug": "soundcloud71",
+      "connector": "greenhouse",
+      "discord_channel_id": null
     }
   ]
 }
