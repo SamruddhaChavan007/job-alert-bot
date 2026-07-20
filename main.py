@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
 import config
 from connectors import CONNECTORS
@@ -11,7 +11,7 @@ from filters import (
     sort_by_recency,
     time_ago,
 )
-from notifier import delete_message, get_job_status, post_error, post_job
+from notifier import POLL_DURATION_HOURS, delete_message, get_job_status, post_error, post_job
 from sheets import append_job, update_status
 from state import load_state, save_state
 
@@ -22,6 +22,12 @@ from state import load_state, save_state
 # a large pre-existing backlog matching on its first-ever run) -- reproduced
 # live: backfilling a new SWE category posted 246 jobs in one run.
 MAX_NEW_JOBS_PER_CATEGORY_PER_RUN = 20
+
+# once a job's poll expires, voting is permanently impossible -- stop
+# checking it (bounds sync workload as state grows) and mark it archived
+# instead of leaving it stuck on "new" forever with no way to tell "still
+# pending" from "nobody ever responded".
+POLL_EXPIRY = timedelta(hours=POLL_DURATION_HOURS)
 
 
 def now_iso() -> str:
@@ -107,6 +113,11 @@ def run() -> None:
         for job_id, record in state.items():
             if record["status"] in ("new", "opened"):
                 try:
+                    first_seen = datetime.fromisoformat(record["first_seen"])
+                    if datetime.now(UTC) - first_seen > POLL_EXPIRY:
+                        record["status"] = "archived"
+                        update_status(record["sheet_row"], "archived")
+                        continue
                     new_status = get_job_status(
                         record["discord_message_id"], record.get("discord_channel_id")
                     )
